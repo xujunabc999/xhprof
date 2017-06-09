@@ -71,7 +71,7 @@ interface iXHProfRuns {
 class XHProfRuns_Default implements iXHProfRuns {
 
   private $dir = '';
-  public $prefix = 't11_';
+  public $prefix = '';//数据表前缀
   public $run_details = null;
   /**
    * 
@@ -87,6 +87,9 @@ class XHProfRuns_Default implements iXHProfRuns {
   protected function db()
   {
 	global $_xhprof;
+      if (!defined('XHPROF_LIB_ROOT')) {
+          define('XHPROF_LIB_ROOT', $GLOBALS['XHPROF_ROOT'].'/xhprof_lib');
+      }
 	require_once XHPROF_LIB_ROOT.'/utils/Db/'.$_xhprof['dbadapter'].'.php';
 	
     $class = self::getDbClass();
@@ -406,18 +409,18 @@ CREATE TABLE `details` (
 		if (!isset($GLOBALS['_xhprof']['serializer']) || strtolower($GLOBALS['_xhprof']['serializer'] == 'php')) {
 			$sql['get'] = $this->db->escape(serialize($_GET));
 			$sql['cookie'] = $this->db->escape(serialize($_COOKIE));
-        
+
 	        //This code has not been tested
 		    if (isset($_xhprof['savepost']) && $_xhprof['savepost'])
 			{
-				$sql['post'] = $this->db->escape(serialize($_POST));
+				$sql['post'] = $this->db->escape(gzuncompress(serialize($_POST)));
 			} else {
-				$sql['post'] = $this->db->escape(serialize(array("Skipped" => "Post data omitted by rule")));
+				$sql['post'] = $this->db->escape(gzuncompress(serialize(array("Skipped" => "Post data omitted by rule"))));
 			}
 		} else {
 			$sql['get'] = $this->db->escape(json_encode($_GET));
 			$sql['cookie'] = $this->db->escape(json_encode($_COOKIE));
-        
+
 	        //This code has not been tested
 		    if (isset($_xhprof['savepost']) && $_xhprof['savepost'])
 			{
@@ -427,7 +430,7 @@ CREATE TABLE `details` (
 			}
 		}
         
-        
+
 	$sql['pmu'] = isset($xhprof_data['main()']['pmu']) ? $xhprof_data['main()']['pmu'] : 0;
  	$sql['wt']  = isset($xhprof_data['main()']['wt'])  ? $xhprof_data['main()']['wt']  : 0;
 	$sql['cpu'] = isset($xhprof_data['main()']['cpu']) ? $xhprof_data['main()']['cpu'] : 0;        
@@ -436,9 +439,9 @@ CREATE TABLE `details` (
 		// The value of 2 seems to be light enugh that we're not killing the server, but still gives us lots of breathing room on 
 		// full production code. 
 		if (!isset($GLOBALS['_xhprof']['serializer']) || strtolower($GLOBALS['_xhprof']['serializer'] == 'php')) {
-			$sql['data'] = $this->db->escape(gzcompress(serialize($xhprof_data), 2));
+			$sql['data'] = $this->db->escape(serialize($xhprof_data), 2);
 		} else {
-			$sql['data'] = $this->db->escape(gzcompress(json_encode($xhprof_data), 2));
+			$sql['data'] = $this->db->escape(json_encode($xhprof_data), 2);
 		}
 			
         
@@ -450,11 +453,11 @@ CREATE TABLE `details` (
         $sql['servername'] = $this->db->escape($sname);
         $sql['type']  = (int) (isset($xhprof_details['type']) ? $xhprof_details['type'] : 0);
         $sql['timestamp'] = $this->db->escape($_SERVER['REQUEST_TIME']);
-	$sql['server_id'] = $this->db->escape($_xhprof['servername']);
+	    $sql['server_id'] = $this->db->escape($_xhprof['servername']);
         $sql['aggregateCalls_include'] = getenv('xhprof_aggregateCalls_include') ? getenv('xhprof_aggregateCalls_include') : '';
         
         $query = "INSERT INTO `details` (`id`, `url`, `c_url`, `timestamp`, `server name`, `perfdata`, `type`, `cookie`, `post`, `get`, `pmu`, `wt`, `cpu`, `server_id`, `aggregateCalls_include`) VALUES('$run_id', '{$sql['url']}', '{$sql['c_url']}', FROM_UNIXTIME('{$sql['timestamp']}'), '{$sql['servername']}', '{$sql['data']}', '{$sql['type']}', '{$sql['cookie']}', '{$sql['post']}', '{$sql['get']}', '{$sql['pmu']}', '{$sql['wt']}', '{$sql['cpu']}', '{$sql['server_id']}', '{$sql['aggregateCalls_include']}')";
-        
+
         $this->db->query($query);
         if ($this->db->affectedRows($this->db->linkID) == 1)
         {

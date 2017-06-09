@@ -7,14 +7,22 @@ function bar($x) {
 }
 
 function foo() {
-  for ($idx = 0; $idx < 5; $idx++) {
+  for ($idx = 0; $idx < 55; $idx++) {
     bar($idx);
     $x = strlen("abc");
   }
 }
 
 // start profiling
-xhprof_enable();
+xhprof_enable(
+    XHPROF_FLAGS_MEMORY|XHPROF_FLAGS_CPU,
+    [
+        'ignored_functions'    => [
+            'call_user_func',
+            'call_user_func_array'
+        ]
+    ]
+);
 
 // run program
 foo();
